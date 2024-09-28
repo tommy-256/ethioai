@@ -1,58 +1,48 @@
 import gradio as gr  
 from transformers import AutoModelForCausalLM, AutoTokenizer  
+import torch  # Import torch for device management  
 
 # Load the model and tokenizer  
 MODEL_NAME = "thatstommy/lora_model"  
 model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)  
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)  
 
+# Move model to appropriate device  
+device = "cuda" if torch.cuda.is_available() else "cpu"  
+model.to(device)  
+
 def generate(text):  
-    inputs = tokenizer(text, return_tensors="pt")  # Tokenize the input  
-    outputs = model.generate(**inputs)  # Generate text using the model  
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)  # Decode the output  
+    try:  
+        inputs = tokenizer(text, return_tensors="pt").to(device)  # Tokenize the input and move to device  
+        outputs = model.generate(**inputs)  # Generate text using the model  
+        return tokenizer.decode(outputs[0], skip_special_tokens=True)  # Decode the output  
+    except Exception as e:  
+        return f"An error occurred: {str(e)}"  
 
 # Custom CSS for styling  
 css = """  
-/* Change the background color */  
+#title {  
+    text-align: center;  
+    margin-bottom: 20px;  
+}  
+#input-text {  
+    width: 100%;  
+}  
+#output-text {  
+    width: 100%;  
+}  
 #component-0 {  
     background-color: #e0e0e0; /* Light gray background */  
-}  
-
-/* Change the color of the title */  
-#title {  
-   font-size: 24px;  
-   color: #003366; /* Dark blue */  
-   text-align: center;  
-}  
-
-/* Change the color of output text */  
-.output-text {  
-   font-size: 22px;  
-   color: #004080; /* Slightly lighter dark blue */  
-   text-align: center;  
-}  
-
-/* Add logo styling */  
-#logo {  
-    display: block;  
-    margin: 0 auto;  
-    width: 150px; /* Size of the logo */  
-}  
-
-/* Input and output styling */  
-.input-textbox, .output-textbox {  
-    border-radius: 5px;  
-    border: 1px solid #003366; /* Dark blue border */  
-    background-color: #ffffff; /* White background for input/output */  
+    padding: 20px;  
+    border-radius: 10px;  
 }  
 """  
 
 # Create the Gradio interface with Blocks  
 with gr.Blocks(css=css) as interface:  
     gr.Markdown("<h1 id='title'>Your Brand Name</h1>")  # Brand Name  
-    gr.Image(value="C:\\Users\\tommy\\Downloads\\logo.jpg", label="Logo", elem_id="logo")  # Logo  
-    input_text = gr.Textbox(label="Enter your prompt:", placeholder="Type your prompt here...")  
-    output_text = gr.Textbox(label="Output:", interactive=False)  
+    input_text = gr.Textbox(label="Enter your prompt:", placeholder="Type your prompt here...", elem_id="input-text")  
+    output_text = gr.Textbox(label="Output:", interactive=False, elem_id="output-text")  
 
     # Button to trigger the model generation function  
     btn = gr.Button("Generate")  
@@ -62,4 +52,4 @@ with gr.Blocks(css=css) as interface:
 
 # Launch the interface  
 if __name__ == "__main__":  
-    interface.launch(server_name="0.0.0.0", server_port=7860, show_error=False, prevent_thread_lock=True)
+    interface.launch()
